@@ -57,6 +57,15 @@ class Game {
     this.resetRound();
   }
 
+  /** 联机客机：套用房主下发的同一张地图 */
+  applyMap(blocks) {
+    if (!blocks || !blocks.length) return;
+    this.mapBlocks = blocks.slice();
+    this.walls = buildWalls(this.mapBlocks);
+    this.freeCells = freeCellCenters(this.walls);
+    this.wallLayer = this.renderWalls();
+  }
+
   buildTanks() {
     const a1 = Math.atan2(SPAWN_P2.y - SPAWN_P1.y, SPAWN_P2.x - SPAWN_P1.x);
     const a2 = Math.atan2(SPAWN_P1.y - SPAWN_P2.y, SPAWN_P1.x - SPAWN_P2.x);
@@ -65,8 +74,9 @@ class Game {
       id: 0, label: '玩家 1', color: PALETTE.p1, dark: PALETTE.p1d,
       x: SPAWN_P1.x, y: SPAWN_P1.y, angle: a1
     });
+    const p2Label = this.mode === 'single' ? '电脑' : (this.mode === 'net' ? '对手' : '玩家 2');
     const p2 = new Tank({
-      id: 1, label: this.mode === 'single' ? '电脑' : '玩家 2',
+      id: 1, label: p2Label,
       color: this.mode === 'single' ? PALETTE.ai : PALETTE.p2,
       dark: this.mode === 'single' ? PALETTE.aid : PALETTE.p2d,
       x: SPAWN_P2.x, y: SPAWN_P2.y, angle: a2, isAI: this.mode === 'single'
