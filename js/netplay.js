@@ -195,6 +195,7 @@ class NetPlay {
 
   applyStart(d) {
     const game = this.game;
+    game.localSide = 1;
     game.start('net', 'normal', d.mm === 'classic' ? 'classic' : 'random');
     if (d.map && d.map.length) game.applyMap(d.map);
     this.phase = 'playing';

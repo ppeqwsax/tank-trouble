@@ -16,6 +16,7 @@ class Game {
 
     this.mode = 'single';
     this.difficulty = 'normal';
+    this.localSide = 0; // 联机时：0 = 房主（蓝方），1 = 客机（红方）
     this.state = 'idle';
     this.score = [0, 0];
     this.round = 1;
@@ -70,11 +71,15 @@ class Game {
     const a1 = Math.atan2(SPAWN_P2.y - SPAWN_P1.y, SPAWN_P2.x - SPAWN_P1.x);
     const a2 = Math.atan2(SPAWN_P1.y - SPAWN_P2.y, SPAWN_P1.x - SPAWN_P2.x);
 
+    const net = this.mode === 'net';
+    const p1Label = net ? (this.localSide === 1 ? '对手' : '你') : '玩家 1';
     const p1 = new Tank({
-      id: 0, label: '玩家 1', color: PALETTE.p1, dark: PALETTE.p1d,
+      id: 0, label: p1Label, color: PALETTE.p1, dark: PALETTE.p1d,
       x: SPAWN_P1.x, y: SPAWN_P1.y, angle: a1
     });
-    const p2Label = this.mode === 'single' ? '电脑' : (this.mode === 'net' ? '对手' : '玩家 2');
+    const p2Label = net
+      ? (this.localSide === 1 ? '你' : '对手')
+      : (this.mode === 'single' ? '电脑' : '玩家 2');
     const p2 = new Tank({
       id: 1, label: p2Label,
       color: this.mode === 'single' ? PALETTE.ai : PALETTE.p2,

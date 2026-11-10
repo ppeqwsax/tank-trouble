@@ -383,6 +383,7 @@
     resetPauseUI();
     game.onMatchEnd = showMatchEnd;
     const mode = net.role === 'host' ? 'net' : selMode;
+    game.localSide = net.role === 'guest' ? 1 : 0;
     game.start(mode, selDiff, selMap);
     if (net.role === 'host') net.startMatch(game.mapBlocks, game.mapMode);
   }
