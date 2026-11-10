@@ -8,7 +8,9 @@ class Game {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.walls = buildWalls();
+    this.mapMode = 'random';
+    this.mapBlocks = generateMap();
+    this.walls = buildWalls(this.mapBlocks);
     this.freeCells = freeCellCenters(this.walls);
     this.wallLayer = this.renderWalls();
 
@@ -37,9 +39,17 @@ class Game {
 
   /* ---------- 生命周期 ---------- */
 
-  start(mode, difficulty) {
+  start(mode, difficulty, mapMode) {
     this.mode = mode || 'single';
     this.difficulty = difficulty || 'normal';
+    this.mapMode = mapMode || 'random';
+
+    // 每局重新生成地图；同一局内所有回合共用同一张图，保证公平
+    this.mapBlocks = this.mapMode === 'classic' ? MAP_BLOCKS.slice() : generateMap();
+    this.walls = buildWalls(this.mapBlocks);
+    this.freeCells = freeCellCenters(this.walls);
+    this.wallLayer = this.renderWalls();
+
     this.score = [0, 0];
     this.round = 1;
     this.elapsed = 0;

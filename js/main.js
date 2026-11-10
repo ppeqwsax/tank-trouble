@@ -20,6 +20,7 @@
 
   let selMode = 'single';
   let selDiff = 'normal';
+  let selMap = 'random';
   let paused = false;
   let last = 0;
   let lastHud = '';
@@ -120,11 +121,19 @@
       '      <button class="btn' + (selDiff === 'hard' ? ' on' : '') + '" data-diff="hard">困难</button>',
       '    </div>',
       '  </div>',
+      '  <div class="group">',
+      '    <div class="group-label">地图</div>',
+      '    <div class="row" id="mapRow">',
+      '      <button class="btn' + (selMap === 'random' ? ' on' : '') + '" data-map="random">随机生成</button>',
+      '      <button class="btn' + (selMap === 'classic' ? ' on' : '') + '" data-map="classic">经典地图</button>',
+      '    </div>',
+      '  </div>',
       '  <button class="btn primary big" id="startBtn">开始游戏</button>',
       '  <div class="rules">',
       '    <div><b>操作</b>：玩家 1 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移动，<kbd>F</kbd> 开火；',
       '    玩家 2 <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> 移动，<kbd>空格</kbd> 开火。</div>',
       '    <div><b>规则</b>：炮弹撞墙会反弹，最多 5 次；一击即毁，误伤自己同样算对手得分；先赢 5 回合者获胜。</div>',
+      '    <div><b>地图</b>：每局开始时随机生成一张 180° 对称迷宫，同一局内各回合共用同一张图。</div>',
       '    <div><b>道具</b>：盾（挡一发）、连（射速翻倍）、速（移速提升）、三（三连发）。</div>',
       '    <div><b>快捷键</b>：<kbd>P</kbd> 暂停 / <kbd>M</kbd> 静音。</div>',
       '  </div>',
@@ -140,6 +149,14 @@
         overlay.querySelectorAll('[data-mode]').forEach(function (x) { x.classList.remove('on'); });
         b.classList.add('on');
         diffGroup.style.display = selMode === 'single' ? '' : 'none';
+      });
+    });
+
+    overlay.querySelectorAll('[data-map]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        selMap = b.getAttribute('data-map');
+        overlay.querySelectorAll('[data-map]').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
       });
     });
 
@@ -160,7 +177,7 @@
     paused = false;
     pauseEl.classList.add('hidden');
     game.onMatchEnd = showMatchEnd;
-    game.start(selMode, selDiff);
+    game.start(selMode, selDiff, selMap);
   }
 
   function showMatchEnd(result) {
@@ -188,7 +205,8 @@
   /* ---------------- HUD ---------------- */
 
   function updateHud() {
-    const label = game.mode === 'single' ? '单人挑战' : '双人对战';
+    const label = (game.mode === 'single' ? '单人挑战' : '双人对战') +
+      (game.mapMode === 'classic' ? ' · 经典图' : ' · 随机图');
     const key = game.score[0] + '|' + game.score[1] + '|' + game.round + '|' + label + '|' + game.state;
     if (key === lastHud) return;
     lastHud = key;

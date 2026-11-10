@@ -125,7 +125,7 @@ function rayRect(ox, oy, dx, dy, rect) {
 
 /* ---------------- 地图 ---------------- */
 
-// 11 x 8 格，[列, 行, 宽(格), 高(格)]
+// 经典固定地图，[列, 行, 宽(格), 高(格)]
 const MAP_BLOCKS = [
   [2, 1, 1, 2], [8, 5, 1, 2],
   [4, 2, 2, 1], [5, 5, 2, 1],
@@ -136,10 +136,131 @@ const MAP_BLOCKS = [
   [4, 6, 2, 1], [5, 1, 2, 1]
 ];
 
+const SPAWN_CELLS = [[1, 1], [COLS - 2, ROWS - 2]];
+
 const SPAWN_P1 = { x: FIELD.x + 1.5 * CELL, y: FIELD.y + 1.5 * CELL };
 const SPAWN_P2 = { x: FIELD.x + 9.5 * CELL, y: FIELD.y + 6.5 * CELL };
 
-function buildWalls() {
+/* ---------- 随机地图 ---------- */
+
+// 出生点周围 3x3 保留为空地
+function isSpawnZone(c, r) {
+  for (let i = 0; i < SPAWN_CELLS.length; i++) {
+    const s = SPAWN_CELLS[i];
+    if (Math.abs(c - s[0]) <= 1 && Math.abs(r - s[1]) <= 1) return true;
+  }
+  return false;
+}
+
+// [宽, 高, 权重]
+const MAP_SHAPES = [
+  [1, 1, 8], [1, 2, 5], [2, 1, 5], [2, 2, 3], [1, 3, 2], [3, 1, 2]
+];
+
+function pickShape() {
+  let total = 0;
+  for (let i = 0; i < MAP_SHAPES.length; i++) total += MAP_SHAPES[i][2];
+  let x = Math.random() * total;
+  for (let i = 0; i < MAP_SHAPES.length; i++) {
+    x -= MAP_SHAPES[i][2];
+    if (x <= 0) return MAP_SHAPES[i];
+  }
+  return MAP_SHAPES[0];
+}
+
+// 180° 旋转对称地放置一块：成功返回 true，并把占用格与方块一并写入
+function placeSymmetric(occ, blocks, c, r, w, h) {
+  if (c < 0 || r < 0 || c + w > COLS || r + h > ROWS) return false;
+
+  const mc = COLS - c - w;
+  const mr = ROWS - r - h;
+  const selfMirror = (mc === c && mr === r);
+
+  // 与自己的镜像部分重叠的摆法直接抛弃（否则同一格会被两块墙重复占用）
+  if (!selfMirror && c < mc + w && mc < c + w && r < mr + h && mr < r + h) return false;
+
+  for (let y = r; y < r + h; y++) {
+    for (let x = c; x < c + w; x++) {
+      if (occ[y * COLS + x] || isSpawnZone(x, y)) return false;
+    }
+  }
+  if (!selfMirror) {
+    for (let y = mr; y < mr + h; y++) {
+      for (let x = mc; x < mc + w; x++) {
+        if (occ[y * COLS + x] || isSpawnZone(x, y)) return false;
+      }
+    }
+  }
+
+  for (let y = r; y < r + h; y++) for (let x = c; x < c + w; x++) occ[y * COLS + x] = 1;
+  blocks.push([c, r, w, h]);
+  if (!selfMirror) {
+    for (let y = mr; y < mr + h; y++) for (let x = mc; x < mc + w; x++) occ[y * COLS + x] = 1;
+    blocks.push([mc, mr, w, h]);
+  }
+  return true;
+}
+
+// 所有空地必须连成一片（否则会出现打不到的封闭口袋）
+function mapConnected(occ) {
+  const sc = SPAWN_CELLS[0];
+  const start = sc[1] * COLS + sc[0];
+  if (occ[start]) return false;
+
+  const seen = new Uint8Array(COLS * ROWS);
+  const stack = [start];
+  seen[start] = 1;
+  let reached = 0;
+
+  while (stack.length) {
+    const idx = stack.pop();
+    reached++;
+    const c = idx % COLS;
+    const r = (idx - c) / COLS;
+    const nb = [[c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]];
+    for (let k = 0; k < 4; k++) {
+      const nc = nb[k][0], nr = nb[k][1];
+      if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) continue;
+      const ni = nr * COLS + nc;
+      if (seen[ni] || occ[ni]) continue;
+      seen[ni] = 1;
+      stack.push(ni);
+    }
+  }
+
+  let free = 0;
+  for (let i = 0; i < occ.length; i++) if (!occ[i]) free++;
+  return reached === free && free >= 34;
+}
+
+// 生成一张 180° 对称、出生点留空、全图连通的随机地图
+function generateMap() {
+  for (let attempt = 0; attempt < 80; attempt++) {
+    const occ = new Uint8Array(COLS * ROWS);
+    const blocks = [];
+    const target = randInt(24, 34); // 目标阻挡格子数（共 88 格）
+    let blocked = 0;
+
+    for (let step = 0; step < 240 && blocked < target; step++) {
+      const s = pickShape();
+      const w = s[0], h = s[1];
+      const c = randInt(0, COLS - w);
+      const r = randInt(0, ROWS - h);
+      const before = blocks.length;
+      if (placeSymmetric(occ, blocks, c, r, w, h)) {
+        blocked += (blocks.length - before) * w * h;
+      }
+    }
+
+    if (blocked < 20) continue;
+    if (!mapConnected(occ)) continue;
+    return blocks;
+  }
+  return MAP_BLOCKS.slice();
+}
+
+function buildWalls(blocks) {
+  const list = blocks && blocks.length ? blocks : MAP_BLOCKS;
   const t = FIELD.x;
   const walls = [
     { x: 0, y: 0, w: GAME_W, h: t },
@@ -147,8 +268,8 @@ function buildWalls() {
     { x: 0, y: t, w: t, h: GAME_H - t * 2 },
     { x: GAME_W - t, y: t, w: t, h: GAME_H - t * 2 }
   ];
-  for (let i = 0; i < MAP_BLOCKS.length; i++) {
-    const b = MAP_BLOCKS[i];
+  for (let i = 0; i < list.length; i++) {
+    const b = list[i];
     walls.push({
       x: FIELD.x + b[0] * CELL,
       y: FIELD.y + b[1] * CELL,
