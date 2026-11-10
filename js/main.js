@@ -13,6 +13,8 @@
   const roundEl = document.getElementById('roundLabel');
   const modeEl = document.getElementById('modeLabel');
   const pauseEl = document.getElementById('pauseLayer');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const toastEl = document.getElementById('toast');
 
   const game = new Game(canvas);
   window.__game = game; // 调试钩子（自动化测试用）
@@ -79,27 +81,78 @@
 
   /* ---------------- 暂停 / 提示 ---------------- */
 
+  function canPause() {
+    return game.state === 'countdown' || game.state === 'playing' || game.state === 'roundover';
+  }
+
+  function setPaused(value) {
+    if (value && !canPause()) return;
+    paused = value;
+    pauseBtn.textContent = paused ? '继续' : '暂停';
+    pauseBtn.classList.toggle('on', paused);
+
+    if (paused) {
+      renderPausePanel();
+      pauseEl.classList.remove('hidden');
+    } else {
+      pauseEl.classList.add('hidden');
+      for (const k in keys) keys[k] = false;
+    }
+  }
+
   function togglePause() {
-    if (game.state === 'idle' || game.state === 'matchover') return;
-    paused = !paused;
-    pauseEl.classList.toggle('hidden', !paused);
+    setPaused(!paused);
+  }
+
+  function resetPauseUI() {
+    paused = false;
+    pauseBtn.textContent = '暂停';
+    pauseBtn.classList.remove('on');
+    pauseEl.classList.add('hidden');
+  }
+
+  function renderPausePanel() {
+    const score = '第 ' + game.round + ' 回合 · ' + game.score[0] + ' : ' + game.score[1];
+    pauseEl.innerHTML = [
+      '<div class="panel compact">',
+      '  <h2 class="panel-title">已暂停</h2>',
+      '  <p class="panel-sub">' + score + '</p>',
+      '  <div class="row center">',
+      '    <button class="btn primary" id="resumeBtn">继续游戏</button>',
+      '  </div>',
+      '  <div class="row center">',
+      '    <button class="btn" id="restartBtn">重新开始</button>',
+      '    <button class="btn" id="quitBtn">退出到主菜单</button>',
+      '  </div>',
+      '  <div class="panel-tip">按 <kbd>P</kbd> 或 <kbd>Esc</kbd> 也可以继续</div>',
+      '</div>'
+    ].join('');
+
+    document.getElementById('resumeBtn').addEventListener('click', function () { setPaused(false); });
+    document.getElementById('restartBtn').addEventListener('click', function () {
+      setPaused(false);
+      startGame();
+    });
+    document.getElementById('quitBtn').addEventListener('click', function () {
+      setPaused(false);
+      showMenu();
+    });
   }
 
   let hintTimer = 0;
   function flashHint(text) {
-    pauseEl.innerHTML = '<div class="hint">' + text + '</div>';
-    pauseEl.classList.remove('hidden');
+    toastEl.textContent = text;
+    toastEl.classList.remove('hidden');
     clearTimeout(hintTimer);
     hintTimer = setTimeout(function () {
-      if (!paused) pauseEl.classList.add('hidden');
-    }, 900);
+      toastEl.classList.add('hidden');
+    }, 1000);
   }
 
   /* ---------------- 菜单 ---------------- */
 
   function showMenu() {
-    paused = false;
-    pauseEl.classList.add('hidden');
+    resetPauseUI();
     game.state = 'idle';
     overlay.classList.remove('hidden');
     overlay.innerHTML = [
@@ -135,7 +188,7 @@
       '    <div><b>规则</b>：炮弹撞墙会反弹，最多 5 次；一击即毁，误伤自己同样算对手得分；先赢 5 回合者获胜。</div>',
       '    <div><b>地图</b>：每局开始时随机生成一张 180° 对称迷宫，同一局内各回合共用同一张图。</div>',
       '    <div><b>道具</b>：盾（挡一发）、连（射速翻倍）、速（移速提升）、三（三连发）。</div>',
-      '    <div><b>快捷键</b>：<kbd>P</kbd> 暂停 / <kbd>M</kbd> 静音。</div>',
+      '    <div><b>快捷键</b>：<kbd>P</kbd> / <kbd>Esc</kbd> 暂停，<kbd>M</kbd> 静音；游戏中也可点右上角「暂停」随时停或退出。</div>',
       '  </div>',
       '</div>'
     ].join('');
@@ -174,8 +227,7 @@
   function startGame() {
     Sfx.init();
     overlay.classList.add('hidden');
-    paused = false;
-    pauseEl.classList.add('hidden');
+    resetPauseUI();
     game.onMatchEnd = showMatchEnd;
     game.start(selMode, selDiff, selMap);
   }
@@ -243,6 +295,17 @@
   fitCanvas();
   window.addEventListener('resize', fitCanvas);
   showMenu();
+
+  // 顶栏暂停按钮：随时可以暂停 / 继续
+  pauseBtn.addEventListener('click', function () {
+    if (paused) setPaused(false);
+    else if (canPause()) setPaused(true);
+  });
+
+  // 切到别的标签页 / 最小化时自动暂停，回来不会突然被 AI 打
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && !paused && canPause()) setPaused(true);
+  });
 
   // 便于自动化验证：?autostart=single|duel
   const auto = new URLSearchParams(location.search).get('autostart');

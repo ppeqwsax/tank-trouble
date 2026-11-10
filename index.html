@@ -12,7 +12,10 @@
   <div class="app">
     <header class="topbar">
       <h1 class="brand">坦克动荡<span>TANK TROUBLE</span></h1>
-      <div class="top-hint"><kbd>P</kbd> 暂停 <span class="dot"></span> <kbd>M</kbd> 静音</div>
+      <div class="top-actions">
+        <button class="btn tiny" id="pauseBtn" type="button">暂停</button>
+        <div class="top-hint"><kbd>P</kbd> 暂停 <span class="dot"></span> <kbd>M</kbd> 静音</div>
+      </div>
     </header>
 
     <section class="hud">
@@ -44,6 +47,8 @@
       <span>误伤同样扣分</span>
     </footer>
   </div>
+
+  <div id="toast" class="toast hidden"></div>
 
   <script src="js/core.js"></script>
   <script src="js/entities.js"></script>

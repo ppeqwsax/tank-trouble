@@ -63,6 +63,12 @@ body {
   font-weight: 400;
 }
 
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .top-hint {
   font-size: 12px;
   color: var(--muted);
@@ -249,6 +255,19 @@ body {
   box-shadow: 0 0 14px rgba(76, 201, 240, 0.25);
 }
 
+.btn.tiny {
+  padding: 5px 14px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.btn.tiny.on {
+  background: rgba(255, 224, 102, 0.16);
+  border-color: var(--accent);
+  color: #ffe9a3;
+  box-shadow: 0 0 12px rgba(255, 224, 102, 0.2);
+}
+
 .btn.primary {
   background: linear-gradient(180deg, #2f9fd0, #1a6f97);
   border-color: #3ab4e0;
@@ -299,19 +318,47 @@ kbd {
 /* ---------- 暂停 / 提示 ---------- */
 
 #pauseLayer {
-  background: rgba(6, 10, 18, 0.55);
-  font-size: 20px;
-  letter-spacing: 6px;
-  color: #cfe0f7;
+  background: rgba(6, 10, 18, 0.64);
 }
 
-#pauseLayer .hint {
-  padding: 10px 20px;
-  background: rgba(20, 30, 50, 0.9);
+.panel.compact {
+  width: min(460px, 100%);
+  padding: 22px 22px 18px;
+}
+
+.panel.compact .panel-title {
+  font-size: 26px;
+  letter-spacing: 6px;
+}
+
+.panel.compact .row.center {
+  margin-top: 10px;
+}
+
+.panel-tip {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+/* ---------- 轻提示 ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #dbe7fb;
+  background: rgba(20, 30, 50, 0.94);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  font-size: 14px;
-  letter-spacing: 2px;
+  border-radius: 999px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  z-index: 40;
+  pointer-events: none;
 }
 
 /* ---------- 底部 ---------- */
@@ -335,7 +382,8 @@ kbd {
   .app { padding-top: 10px; gap: 8px; }
   .brand { font-size: 17px; letter-spacing: 4px; }
   .brand span { display: none; }
-  .top-hint { font-size: 11px; }
+  .top-hint { display: none; }
+  .btn.tiny { padding: 4px 11px; }
   .score { font-size: 22px; }
   .panel { padding: 18px 16px; }
   .panel-title { font-size: 22px; letter-spacing: 4px; }
