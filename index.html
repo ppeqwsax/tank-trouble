@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="坦克动荡：炮弹撞墙反弹的经典坦克对战，支持单人对电脑与双人同屏。">
+<title>坦克动荡 · Tank Trouble</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f1729'/%3E%3Crect x='6' y='12' width='16' height='10' rx='3' fill='%234cc9f0'/%3E%3Ccircle cx='14' cy='17' r='4' fill='%230f1729'/%3E%3Crect x='20' y='15' width='8' height='4' rx='2' fill='%234cc9f0'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <h1 class="brand">坦克动荡<span>TANK TROUBLE</span></h1>
+      <div class="top-hint"><kbd>P</kbd> 暂停 <span class="dot"></span> <kbd>M</kbd> 静音</div>
+    </header>
+
+    <section class="hud">
+      <div class="side p1">
+        <span class="tag" id="p1tag">玩家 1</span>
+        <span class="score" id="score1">0</span>
+      </div>
+      <div class="mid">
+        <span class="round" id="roundLabel">准备中</span>
+        <span class="mode" id="modeLabel">单人挑战</span>
+      </div>
+      <div class="side p2">
+        <span class="tag" id="p2name">电脑</span>
+        <span class="score" id="score2">0</span>
+      </div>
+    </section>
+
+    <section class="stage">
+      <canvas id="game" width="960" height="720"></canvas>
+      <div id="overlay" class="overlay"></div>
+      <div id="pauseLayer" class="overlay hidden"></div>
+    </section>
+
+    <footer class="foot">
+      <span>先赢 <b>5</b> 回合者获胜</span>
+      <span class="sep">·</span>
+      <span>炮弹最多反弹 <b>5</b> 次</span>
+      <span class="sep">·</span>
+      <span>误伤同样扣分</span>
+    </footer>
+  </div>
+
+  <script src="js/core.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
