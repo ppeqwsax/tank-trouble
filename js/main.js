@@ -24,6 +24,8 @@
   window.__net = net;
 
   const keys = Object.create(null);
+  const keymap = KeyMap.load();
+  let capturing = null; // 改键位时正在等待按键的那个格子
 
   let selMode = 'single';
   let selDiff = 'normal';
@@ -51,6 +53,14 @@
 
   window.addEventListener('keydown', function (e) {
     if (BLOCK.indexOf(e.code) >= 0) e.preventDefault();
+
+    // 正在改键位：吃掉所有按键，只用来绑定
+    if (capturing) {
+      e.preventDefault();
+      if (!e.repeat) handleCapture(e);
+      return;
+    }
+
     if (e.repeat) return;
     keys[e.code] = true;
 
@@ -70,28 +80,30 @@
     for (const k in keys) keys[k] = false;
   });
 
-  // 单人 / 双人本机：玩家 1 用 WASD，玩家 2 用方向键
-  function readInputs() {
-    game.inputs[0] = {
-      forward: (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0),
-      turn: (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0),
-      fire: !!keys.KeyF
+  function inputOf(bind) {
+    return {
+      forward: (keys[bind.up] ? 1 : 0) - (keys[bind.down] ? 1 : 0),
+      turn: (keys[bind.right] ? 1 : 0) - (keys[bind.left] ? 1 : 0),
+      fire: !!keys[bind.fire]
     };
+  }
+
+  // 单人 / 双人本机：玩家 1 用自己的一套键，玩家 2 用另一套
+  function readInputs() {
+    game.inputs[0] = inputOf(keymap.p1);
     if (game.mode === 'duel') {
-      game.inputs[1] = {
-        forward: (keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0),
-        turn: (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0),
-        fire: !!keys.Space
-      };
+      game.inputs[1] = inputOf(keymap.p2);
     }
   }
 
   // 联机：每人一台电脑，两套按键都能用
   function netLocalInput() {
+    const a = inputOf(keymap.p1);
+    const b = inputOf(keymap.p2);
     return {
-      forward: ((keys.KeyW || keys.ArrowUp) ? 1 : 0) - ((keys.KeyS || keys.ArrowDown) ? 1 : 0),
-      turn: ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0),
-      fire: !!(keys.KeyF || keys.Space)
+      forward: Math.max(a.forward, b.forward) + Math.min(a.forward, b.forward),
+      turn: Math.max(a.turn, b.turn) + Math.min(a.turn, b.turn),
+      fire: a.fire || b.fire
     };
   }
 
@@ -190,6 +202,104 @@
     }, 1600);
   }
 
+  /* ---------------- 改键位 ---------------- */
+
+  function kbdHtml(code) {
+    return '<kbd>' + KeyMap.label(code) + '</kbd>';
+  }
+
+  function dirHtml(bind) {
+    const arrows = ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
+    const codes = [bind.up, bind.left, bind.down, bind.right];
+    if (codes.every(function (c) { return arrows.indexOf(c) >= 0; })) return '<kbd>方向键</kbd>';
+    return codes.map(kbdHtml).join('');
+  }
+
+  function endCapture() {
+    if (capturing && capturing.btn) {
+      capturing.btn.textContent = KeyMap.label(keymap[capturing.side][capturing.act]);
+      capturing.btn.classList.remove('capturing');
+    }
+    capturing = null;
+  }
+
+  function handleCapture(e) {
+    const c = capturing;
+    if (!c) return;
+    if (e.code === 'Escape') {
+      endCapture();
+      flashHint('已取消');
+      return;
+    }
+    const reserved = KeyMap.reservedReason(e.code);
+    if (reserved) {
+      flashHint('这个键被占用了：' + reserved);
+      return;
+    }
+    const who = KeyMap.conflict(keymap, c.side, c.act, e.code);
+    if (who) {
+      flashHint('这个键已经被「' + who + '」用了');
+      return;
+    }
+    keymap[c.side][c.act] = e.code;
+    KeyMap.save(keymap);
+    endCapture();
+  }
+
+  function showKeyPanel() {
+    endCapture();
+    overlay.classList.remove('hidden');
+
+    const rows = KeyMap.ACTIONS.map(function (a) {
+      return '<div class="key-row">' +
+        '<div class="key-name">' + a.name + '</div>' +
+        '<button class="btn key-btn" data-side="p1" data-act="' + a.id + '">' + KeyMap.label(keymap.p1[a.id]) + '</button>' +
+        '<button class="btn key-btn" data-side="p2" data-act="' + a.id + '">' + KeyMap.label(keymap.p2[a.id]) + '</button>' +
+        '</div>';
+    }).join('');
+
+    overlay.innerHTML = [
+      '<div class="panel">',
+      '  <h2 class="panel-title">改键位</h2>',
+      '  <p class="panel-sub">点一下方框，再按下想用的键</p>',
+      '  <div class="key-head"><div></div><div>玩家 1</div><div>玩家 2</div></div>',
+      rows,
+      '  <div class="row center">',
+      '    <button class="btn" id="kmReset">恢复默认</button>',
+      '    <button class="btn primary" id="kmBack">完成</button>',
+      '  </div>',
+      '  <div class="net-tip">Esc / P / M 是全局快捷键，不能占用；联机时两套键都能用。</div>',
+      '</div>'
+    ].join('');
+
+    overlay.querySelectorAll('.key-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        endCapture();
+        btn.textContent = '按下新键…';
+        btn.classList.add('capturing');
+        capturing = {
+          side: btn.getAttribute('data-side'),
+          act: btn.getAttribute('data-act'),
+          btn: btn
+        };
+      });
+    });
+
+    document.getElementById('kmReset').addEventListener('click', function () {
+      keymap.p1 = Object.assign({}, KeyMap.DEFAULTS.p1);
+      keymap.p2 = Object.assign({}, KeyMap.DEFAULTS.p2);
+      KeyMap.save(keymap);
+      endCapture();
+      showKeyPanel();
+      flashHint('已恢复默认键位');
+    });
+
+    document.getElementById('kmBack').addEventListener('click', function () {
+      endCapture();
+      showMenu();
+    });
+  }
+
   /* ---------------- 菜单 ---------------- */
 
   function showMenu() {
@@ -233,9 +343,12 @@
       '    </div>',
       '    <div class="net-tip">房主用蓝方、客机用红方；地图由房主生成后下发。</div>',
       '  </div>',
+      '  <div class="row center">',
+      '    <button class="btn tiny" id="keyBtn">改键位</button>',
+      '  </div>',
       '  <button class="btn primary big" id="startBtn">开始游戏</button>',
       '  <div class="rules">',
-      '    <div><b>操作</b>：<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>（或方向键）移动，<kbd>F</kbd>（或空格）开火。</div>',
+      '    <div><b>操作</b>：玩家 1 ' + dirHtml(keymap.p1) + ' 移动，' + kbdHtml(keymap.p1.fire) + ' 开火；玩家 2 ' + dirHtml(keymap.p2) + ' 移动，' + kbdHtml(keymap.p2.fire) + ' 开火。</div>',
       '    <div><b>规则</b>：炮弹撞墙会反弹，最多 5 次；一击即毁，误伤自己同样算对手得分；先赢 5 回合者获胜。</div>',
       '    <div><b>地图</b>：每局开始时随机生成一张 180° 对称迷宫，同一局内各回合共用同一张图。</div>',
       '    <div><b>道具</b>：盾（挡一发）、连（射速翻倍）、速（移速提升）、三（三连发）。</div>',
@@ -281,6 +394,7 @@
     });
 
     document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('keyBtn').addEventListener('click', showKeyPanel);
 
     const roomInput = document.getElementById('roomInput');
     roomInput.addEventListener('input', function () {

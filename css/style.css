@@ -415,6 +415,45 @@ kbd {
   letter-spacing: 0.5px;
 }
 
+/* ---------- 改键位 ---------- */
+
+.key-head,
+.key-row {
+  display: grid;
+  grid-template-columns: 76px 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.key-head {
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.key-row {
+  margin-bottom: 6px;
+}
+
+.key-name {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.key-btn {
+  width: 100%;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.key-btn.capturing {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ---------- 底部 ---------- */
 
 .foot {
@@ -443,4 +482,23 @@ kbd {
   .panel-title { font-size: 22px; letter-spacing: 4px; }
   .rules { font-size: 11.5px; }
   .foot { flex-wrap: wrap; font-size: 11px; }
+}
+
+/* 窄屏时遮罩铺满视口，面板内容多也能滚动到底 */
+@media (max-width: 720px) {
+  .overlay {
+    position: fixed;
+    inset: 0;
+    align-items: flex-start;
+    padding: 14px 12px calc(14px + env(safe-area-inset-bottom));
+    border-radius: 0;
+    z-index: 40;
+  }
+
+  .overlay .panel { margin: auto; }
+
+  .key-head,
+  .key-row { grid-template-columns: 62px 1fr 1fr; gap: 6px; }
+
+  .key-btn { padding: 8px 2px; font-size: 13px; }
 }
